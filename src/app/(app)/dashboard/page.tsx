@@ -1,23 +1,55 @@
-import { headers } from "next/headers"
-
-import { auth } from "@/lib/auth"
+import { requireActiveMember } from "@/lib/session"
+import { getDashboardTasks, countCompletedThisWeek } from "@/services/tasks"
+import { QuickAddTaskForm } from "@/components/tasks/quick-add-task-form"
+import { TaskSection } from "@/components/tasks/task-section"
 
 export default async function DashboardPage() {
-  const reqHeaders = await headers()
-  const session = await auth.api.getSession({ headers: reqHeaders })
-  const household = await auth.api.getFullOrganization({ headers: reqHeaders })
+  const { session, member, householdId } = await requireActiveMember()
+
+  const [{ today, thisWeek, later }, completedThisWeek] = await Promise.all([
+    getDashboardTasks(householdId, member),
+    countCompletedThisWeek(householdId, member),
+  ])
+
+  const firstName = session.user.name?.split(" ")[0] ?? ""
 
   return (
-    <div className="mx-auto w-full max-w-2xl flex-1 space-y-2 px-6 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">
-        Buenos días, {session?.user.name?.split(" ")[0] ?? ""} 👋
-      </h1>
-      <p className="text-muted-foreground">
-        {household?.name} tiene {household?.members.length ?? 0}{" "}
-        {household?.members.length === 1 ? "miembro" : "miembros"}. El
-        dashboard de Hoy / Esta semana / Más adelante llega en la siguiente
-        fase.
-      </p>
+    <div className="mx-auto w-full max-w-2xl flex-1 space-y-8 px-6 py-10">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Buenos días, {firstName} 👋
+        </h1>
+        {completedThisWeek > 0 && (
+          <p className="text-sm text-muted-foreground">
+            Esta semana has vaciado tu cabeza de {completedThisWeek}{" "}
+            {completedThisWeek === 1 ? "tarea" : "tareas"}.
+          </p>
+        )}
+      </div>
+
+      <QuickAddTaskForm />
+
+      <div className="space-y-6">
+        <TaskSection
+          icon="☑"
+          title="Hoy"
+          tasks={today}
+          emptyLabel="Nada urgente para hoy."
+          markOverdue
+        />
+        <TaskSection
+          icon="📅"
+          title="Esta semana"
+          tasks={thisWeek}
+          emptyLabel="Nada más esta semana."
+        />
+        <TaskSection
+          icon="🌿"
+          title="Más adelante"
+          tasks={later}
+          emptyLabel="Nada pendiente sin fecha próxima."
+        />
+      </div>
     </div>
   )
 }
