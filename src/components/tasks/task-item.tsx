@@ -18,6 +18,7 @@ type TaskItemProps = {
   defaultDone?: boolean
   completedAt?: Date | null
   subtitle?: string | null
+  recurring?: boolean
 }
 
 export function TaskItem({
@@ -28,6 +29,7 @@ export function TaskItem({
   defaultDone = false,
   completedAt,
   subtitle,
+  recurring = false,
 }: TaskItemProps) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -56,6 +58,7 @@ export function TaskItem({
       />
       <span className="flex flex-1 items-center gap-2 text-sm">
         {title}
+        {recurring && <span title="Se repite">🔁</span>}
         {subtitle && <Badge variant="secondary">{subtitle}</Badge>}
       </span>
       {dateLabel && (

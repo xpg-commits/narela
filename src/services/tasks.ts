@@ -2,8 +2,9 @@ import { addDays, endOfDay, startOfDay } from "date-fns"
 
 import { db } from "@/lib/db"
 import { visibleTaskWhere } from "@/lib/permissions"
+import { computeNextOccurrence } from "@/lib/recurrence"
 import type { TaskDraft } from "@/lib/ai/schemas"
-import type { TaskModule } from "@/generated/prisma/enums"
+import type { TaskModule, RecurrenceType } from "@/generated/prisma/enums"
 
 type VisibilityMember = { id: string; visibilityRole: string }
 
@@ -18,6 +19,8 @@ export type CreateTaskInput = {
   childId?: string | null
   relatedMemberId?: string | null
   assignedToMemberId?: string | null
+  recurrenceType?: RecurrenceType
+  recurrenceIntervalDays?: number | null
 }
 
 export async function createTask(input: CreateTaskInput) {
@@ -33,6 +36,8 @@ export async function createTask(input: CreateTaskInput) {
       childId: input.childId ?? null,
       relatedMemberId: input.relatedMemberId ?? null,
       assignedToMemberId: input.assignedToMemberId ?? null,
+      recurrenceType: input.recurrenceType ?? "NONE",
+      recurrenceIntervalDays: input.recurrenceIntervalDays ?? null,
       source: "MANUAL",
     },
   })
@@ -66,11 +71,54 @@ export async function getTasksForEntity(
 }
 
 export async function setTaskStatus(taskId: string, done: boolean) {
-  return db.task.update({
-    where: { id: taskId },
-    data: done
-      ? { status: "DONE", completedAt: new Date() }
-      : { status: "PENDING", completedAt: null },
+  if (!done) {
+    // Reopening doesn't try to undo any next occurrence that recurrence may
+    // already have generated — simplest correct behavior for the common
+    // case (someone unchecked by mistake), not worth the extra bookkeeping
+    // for the rare case (unchecking specifically to cancel the next one).
+    return db.task.update({
+      where: { id: taskId },
+      data: { status: "PENDING", completedAt: null },
+    })
+  }
+
+  const completedAt = new Date()
+
+  return db.$transaction(async (tx) => {
+    const task = await tx.task.update({
+      where: { id: taskId },
+      data: { status: "DONE", completedAt },
+    })
+
+    const nextDueDate = computeNextOccurrence({
+      recurrenceType: task.recurrenceType,
+      recurrenceIntervalDays: task.recurrenceIntervalDays,
+      dueDate: task.dueDate,
+      completedAt,
+    })
+
+    if (nextDueDate) {
+      await tx.task.create({
+        data: {
+          householdId: task.householdId,
+          title: task.title,
+          description: task.description,
+          module: task.module,
+          dueDate: nextDueDate,
+          petId: task.petId,
+          vehicleId: task.vehicleId,
+          childId: task.childId,
+          relatedMemberId: task.relatedMemberId,
+          assignedToMemberId: task.assignedToMemberId,
+          recurrenceType: task.recurrenceType,
+          recurrenceIntervalDays: task.recurrenceIntervalDays,
+          previousTaskId: task.id,
+          source: task.source,
+        },
+      })
+    }
+
+    return task
   })
 }
 

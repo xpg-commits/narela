@@ -3,11 +3,15 @@
 import { requireActiveMember } from "@/lib/session"
 import { db } from "@/lib/db"
 import * as taskService from "@/services/tasks"
-import { TaskModule } from "@/generated/prisma/enums"
+import { TaskModule, RecurrenceType } from "@/generated/prisma/enums"
 
 type ActionResult = { success: true } | { success: false; error: string }
 
 const VALID_MODULES = new Set<string>(Object.values(TaskModule))
+const RECURRING_TYPES = new Set<string>([
+  RecurrenceType.REACTIVE,
+  RecurrenceType.FIXED_SCHEDULE,
+])
 
 export async function createTaskAction(formData: FormData): Promise<ActionResult> {
   const { householdId } = await requireActiveMember()
@@ -76,6 +80,17 @@ export async function createTaskAction(formData: FormData): Promise<ActionResult
     }
   }
 
+  const recurrenceTypeRaw = String(formData.get("recurrenceType") ?? "").trim()
+  const recurrenceIntervalDaysRaw = String(
+    formData.get("recurrenceIntervalDays") ?? ""
+  ).trim()
+  const intervalDays = Number(recurrenceIntervalDaysRaw)
+  const recurrenceType =
+    RECURRING_TYPES.has(recurrenceTypeRaw) && Number.isInteger(intervalDays) && intervalDays > 0
+      ? (recurrenceTypeRaw as RecurrenceType)
+      : undefined
+  const recurrenceIntervalDays = recurrenceType ? intervalDays : undefined
+
   await taskService.createTask({
     householdId,
     title,
@@ -85,6 +100,8 @@ export async function createTaskAction(formData: FormData): Promise<ActionResult
     vehicleId,
     childId,
     relatedMemberId,
+    recurrenceType,
+    recurrenceIntervalDays,
   })
 
   return { success: true }

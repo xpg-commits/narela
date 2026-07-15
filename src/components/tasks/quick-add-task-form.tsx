@@ -6,6 +6,7 @@ import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { RecurrenceFields } from "@/components/tasks/recurrence-fields"
 import { createTaskAction } from "@/actions/tasks"
 
 export function QuickAddTaskForm({
@@ -20,7 +21,7 @@ export function QuickAddTaskForm({
   return (
     <form
       ref={formRef}
-      className="flex flex-col gap-2 sm:flex-row"
+      className="flex flex-col gap-2"
       action={(formData: FormData) => {
         startTransition(async () => {
           const result = await createTaskAction(formData)
@@ -37,16 +38,19 @@ export function QuickAddTaskForm({
         Object.entries(hiddenFields).map(([name, value]) => (
           <input key={name} type="hidden" name={name} value={value} />
         ))}
-      <Input
-        name="title"
-        placeholder="Añadir algo que recordar…"
-        required
-        className="flex-1"
-      />
-      <Input name="dueDate" type="date" className="sm:w-40" />
-      <Button type="submit" disabled={pending}>
-        {pending ? "Añadiendo…" : "Añadir"}
-      </Button>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Input
+          name="title"
+          placeholder="Añadir algo que recordar…"
+          required
+          className="flex-1"
+        />
+        <Input name="dueDate" type="date" className="sm:w-40" />
+        <Button type="submit" disabled={pending}>
+          {pending ? "Añadiendo…" : "Añadir"}
+        </Button>
+      </div>
+      <RecurrenceFields />
     </form>
   )
 }

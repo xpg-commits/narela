@@ -6,6 +6,7 @@ type TaskForSection = {
   dueDate: Date | null
   completedAt?: Date | null
   subtitle?: string | null
+  recurrenceType?: string
 }
 
 export function TaskSection({
@@ -46,6 +47,7 @@ export function TaskSection({
               defaultDone={showAsDone}
               completedAt={showAsDone ? task.completedAt : null}
               subtitle={task.subtitle}
+              recurring={Boolean(task.recurrenceType && task.recurrenceType !== "NONE")}
             />
           ))}
         </div>

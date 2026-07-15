@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { RecurrenceFields } from "@/components/tasks/recurrence-fields"
 import { createTaskAction } from "@/actions/tasks"
 
 type Person = { value: string; label: string }
@@ -31,7 +32,7 @@ export function HealthQuickAddForm({
   return (
     <form
       ref={formRef}
-      className="flex flex-col gap-2 sm:flex-row"
+      className="flex flex-col gap-2"
       action={(formData: FormData) => {
         startTransition(async () => {
           const result = await createTaskAction(formData)
@@ -45,33 +46,36 @@ export function HealthQuickAddForm({
       }}
     >
       <input type="hidden" name="module" value="HEALTH" />
-      <Input
-        name="title"
-        placeholder="Ej: revisión pediatra"
-        required
-        className="flex-1"
-      />
-      <Select name="personSelector" required>
-        <SelectTrigger className="sm:w-44">
-          <SelectValue placeholder="¿Para quién?" />
-        </SelectTrigger>
-        <SelectContent>
-          {members.map((m) => (
-            <SelectItem key={m.value} value={m.value}>
-              {m.label}
-            </SelectItem>
-          ))}
-          {children.map((c) => (
-            <SelectItem key={c.value} value={c.value}>
-              {c.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Input name="dueDate" type="date" className="sm:w-40" />
-      <Button type="submit" disabled={pending}>
-        {pending ? "Añadiendo…" : "Añadir"}
-      </Button>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Input
+          name="title"
+          placeholder="Ej: revisión pediatra"
+          required
+          className="flex-1"
+        />
+        <Select name="personSelector" required>
+          <SelectTrigger className="sm:w-44">
+            <SelectValue placeholder="¿Para quién?" />
+          </SelectTrigger>
+          <SelectContent>
+            {members.map((m) => (
+              <SelectItem key={m.value} value={m.value}>
+                {m.label}
+              </SelectItem>
+            ))}
+            {children.map((c) => (
+              <SelectItem key={c.value} value={c.value}>
+                {c.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Input name="dueDate" type="date" className="sm:w-40" />
+        <Button type="submit" disabled={pending}>
+          {pending ? "Añadiendo…" : "Añadir"}
+        </Button>
+      </div>
+      <RecurrenceFields />
     </form>
   )
 }
