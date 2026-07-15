@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -10,4 +8,415 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+model User {
+  id               String            @id
+  name             String
+  email            String
+  emailVerified    Boolean           @default(false)
+  image            String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  sessions         Session[]
+  accounts         Account[]
+  householdmembers HouseholdMember[]
+  householdinvites HouseholdInvite[]
+  aiGenerations    AiGeneration[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id                   String   @id
+  expiresAt            DateTime
+  token                String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  ipAddress            String?
+  userAgent            String?
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeOrganizationId String?
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model Household {
+  id                  String               @id
+  name                String
+  slug                String
+  logo                String?
+  createdAt           DateTime
+  metadata            String?
+  planTier            String               @default("FREE")
+  householdmembers    HouseholdMember[]
+  householdinvites    HouseholdInvite[]
+  pets                Pet[]
+  vehicles            Vehicle[]
+  children            Child[]
+  tasks               Task[]
+  routineApplications RoutineApplication[]
+  aiGenerations       AiGeneration[]
+  shoppingLists       ShoppingList[]
+
+  @@unique([slug])
+  @@map("household")
+}
+
+model HouseholdMember {
+  id             String    @id
+  organizationId String
+  household      Household @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String    @default("member")
+  createdAt      DateTime
+  visibilityRole String    @default("ADULT")
+  displayName    String?
+
+  assignedTasks      Task[] @relation("TaskAssignee")
+  relatedHealthTasks Task[] @relation("TaskRelatedMember")
+
+  @@index([organizationId])
+  @@index([userId])
+  @@map("householdMember")
+}
+
+model HouseholdInvite {
+  id             String    @id
+  organizationId String
+  household      Household @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  role           String?
+  status         String    @default("pending")
+  expiresAt      DateTime
+  createdAt      DateTime  @default(now())
+  inviterId      String
+  user           User      @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([email])
+  @@map("householdInvite")
+}
+
+// ============================================================================
+// Everything below this line is hand-written domain schema (not touched by
+// `better-auth generate`). Domain models point at Household via their own
+// `householdId` field — note the generated models above still use the
+// literal field name `organizationId` for the same relation internally,
+// since a rename attempt there produced an invalid duplicate `@relation`
+// (verified against better-auth 1.6.23); not worth fighting the generator
+// for a cosmetic field name on a block we don't hand-edit anyway.
+// ============================================================================
+
+enum TaskModule {
+  GENERAL
+  HOME
+  VEHICLE
+  PET
+  CHILD
+  HEALTH
+  SHOPPING
+}
+
+enum TaskStatus {
+  PENDING
+  DONE
+  SKIPPED
+}
+
+enum TaskSource {
+  MANUAL
+  TEMPLATE
+  AI
+}
+
+enum TaskVisibility {
+  HOUSEHOLD
+  ASSIGNED_ONLY
+}
+
+enum RecurrenceType {
+  NONE
+  FIXED_SCHEDULE
+  REACTIVE
+}
+
+enum TemplateCategory {
+  MOVING
+  BABY
+  NEW_PET
+  VACATION
+  CHRISTMAS
+  BIRTHDAY
+  KITCHEN_RENOVATION
+  BUY_HOUSE
+  BUY_CAR
+}
+
+enum AiGenerationStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUSED
+}
+
+enum ShoppingItemStatus {
+  ACTIVE
+  PURCHASED
+  ARCHIVED
+}
+
+model Pet {
+  id          String    @id @default(cuid())
+  householdId String
+  name        String
+  species     String
+  breed       String?
+  birthDate   DateTime?
+  notes       String?
+
+  household  Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  tasks      Task[]
+  weightLogs PetWeightLog[]
+
+  createdAt DateTime @default(now())
+
+  @@index([householdId])
+}
+
+model PetWeightLog {
+  id    String   @id @default(cuid())
+  petId String
+  date  DateTime
+  kg    Float
+
+  pet Pet @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId])
+}
+
+model Vehicle {
+  id          String  @id @default(cuid())
+  householdId String
+  alias       String
+  make        String?
+  model       String?
+  year        Int?
+  plate       String?
+  notes       String?
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+
+  createdAt DateTime @default(now())
+
+  @@index([householdId])
+}
+
+model Child {
+  id          String    @id @default(cuid())
+  householdId String
+  name        String
+  birthDate   DateTime?
+  notes       String?
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+
+  createdAt DateTime @default(now())
+
+  @@index([householdId])
+}
+
+model Task {
+  id          String         @id @default(cuid())
+  householdId String
+  title       String
+  description String?
+  module      TaskModule     @default(GENERAL)
+  status      TaskStatus     @default(PENDING)
+  visibility  TaskVisibility @default(HOUSEHOLD)
+
+  dueDate     DateTime?
+  completedAt DateTime?
+
+  petId              String?
+  vehicleId          String?
+  childId            String?
+  relatedMemberId    String?
+  assignedToMemberId String?
+
+  metadata Json?
+
+  source               TaskSource @default(MANUAL)
+  sourceTemplateTaskId String?
+  aiGenerationId       String?
+
+  recurrenceType         RecurrenceType @default(NONE)
+  recurrenceIntervalDays Int?
+  previousTaskId         String?        @unique
+
+  household          Household            @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  pet                Pet?                 @relation(fields: [petId], references: [id], onDelete: SetNull)
+  vehicle            Vehicle?             @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  child              Child?               @relation(fields: [childId], references: [id], onDelete: SetNull)
+  relatedMember      HouseholdMember?     @relation("TaskRelatedMember", fields: [relatedMemberId], references: [id], onDelete: SetNull)
+  assignedTo         HouseholdMember?     @relation("TaskAssignee", fields: [assignedToMemberId], references: [id], onDelete: SetNull)
+  sourceTemplateTask RoutineTemplateTask? @relation(fields: [sourceTemplateTaskId], references: [id], onDelete: SetNull)
+  aiGeneration       AiGeneration?        @relation(fields: [aiGenerationId], references: [id], onDelete: SetNull)
+
+  previousTask Task? @relation("TaskRecurrenceChain", fields: [previousTaskId], references: [id])
+  nextTask     Task? @relation("TaskRecurrenceChain")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([householdId, status, dueDate])
+  @@index([householdId, module])
+  @@index([assignedToMemberId])
+}
+
+model RoutineTemplate {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  name        String
+  description String?
+  category    TemplateCategory
+  icon        String?
+  isActive    Boolean          @default(true)
+
+  tasks        RoutineTemplateTask[]
+  applications RoutineApplication[]
+
+  createdAt DateTime @default(now())
+}
+
+model RoutineTemplateTask {
+  id          String     @id @default(cuid())
+  templateId  String
+  title       String
+  description String?
+  dayOffset   Int
+  module      TaskModule @default(GENERAL)
+  order       Int        @default(0)
+
+  defaultRecurrenceType         RecurrenceType @default(NONE)
+  defaultRecurrenceIntervalDays Int?
+
+  template     RoutineTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  createdTasks Task[]
+
+  @@index([templateId])
+}
+
+model RoutineApplication {
+  id          String   @id @default(cuid())
+  householdId String
+  templateId  String
+  triggerDate DateTime
+  appliedById String
+
+  household Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  template  RoutineTemplate @relation(fields: [templateId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([householdId])
+}
+
+model AiGeneration {
+  id            String             @id @default(cuid())
+  householdId   String
+  requestedById String
+  inputText     String
+  status        AiGenerationStatus @default(PENDING)
+  model         String
+  rawResponse   Json?
+  errorMessage  String?
+
+  household    Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  requestedBy  User      @relation(fields: [requestedById], references: [id])
+  tasksCreated Task[]
+
+  createdAt DateTime @default(now())
+
+  @@index([householdId, createdAt])
+}
+
+model ShoppingList {
+  id          String @id @default(cuid())
+  householdId String
+  name        String @default("Supermercado")
+
+  household Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  items     ShoppingItem[]
+
+  createdAt DateTime @default(now())
+
+  @@index([householdId])
+}
+
+model ShoppingItem {
+  id       String             @id @default(cuid())
+  listId   String
+  name     String
+  category String?
+  status   ShoppingItemStatus @default(ACTIVE)
+
+  lastPurchasedAt         DateTime?
+  avgPurchaseIntervalDays Int?
+
+  list      ShoppingList           @relation(fields: [listId], references: [id], onDelete: Cascade)
+  purchases ShoppingItemPurchase[]
+
+  createdAt DateTime @default(now())
+
+  @@index([listId, status])
+}
+
+model ShoppingItemPurchase {
+  id          String   @id @default(cuid())
+  itemId      String
+  purchasedAt DateTime @default(now())
+
+  item ShoppingItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
 }

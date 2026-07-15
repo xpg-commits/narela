@@ -1,0 +1,81 @@
+import { betterAuth } from "better-auth"
+import { prismaAdapter } from "better-auth/adapters/prisma"
+import { organization } from "better-auth/plugins/organization"
+import { nextCookies } from "better-auth/next-js"
+
+import { db } from "@/lib/db"
+import { memberLimitForPlan } from "@/lib/plan"
+
+const googleConfigured = Boolean(
+  process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+)
+
+export const auth = betterAuth({
+  baseURL: process.env.BETTER_AUTH_URL,
+  secret: process.env.BETTER_AUTH_SECRET,
+  database: prismaAdapter(db, {
+    provider: "postgresql",
+  }),
+  emailAndPassword: {
+    enabled: true,
+  },
+  socialProviders: googleConfigured
+    ? {
+        google: {
+          clientId: process.env.GOOGLE_CLIENT_ID!,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        },
+      }
+    : undefined,
+  plugins: [
+    organization({
+      // "Household" is our domain vocabulary for what the plugin calls an
+      // "organization" — renamed at the table level instead of adding a
+      // separate vocabulary layer, so the Prisma model itself reads as
+      // Household/HouseholdMember/HouseholdInvite.
+      schema: {
+        organization: {
+          modelName: "household",
+          additionalFields: {
+            planTier: {
+              type: "string",
+              required: true,
+              defaultValue: "FREE",
+              input: false,
+            },
+          },
+        },
+        member: {
+          modelName: "householdMember",
+          additionalFields: {
+            // Independent from the plugin's own `role` (owner/admin/member,
+            // which governs household-management permissions): this axis
+            // controls what a member is allowed to *see* ("cada uno ve solo
+            // lo suyo"). Never branch visibility logic on `role`.
+            visibilityRole: {
+              type: "string",
+              required: true,
+              defaultValue: "ADULT",
+            },
+            displayName: {
+              type: "string",
+              required: false,
+            },
+          },
+        },
+        invitation: {
+          modelName: "householdInvite",
+        },
+      },
+      // Only enforced by Better Auth at *accept* time, not at invite-creation
+      // time (verified against 1.6.23's crud-invites.mjs — createInvitation
+      // never reads this option, only acceptInvitation does). It's still
+      // worth setting as a safety net against races/stale invites; the
+      // user-facing check at invite time lives in src/actions/household.ts.
+      membershipLimit: async (_user, organization) =>
+        memberLimitForPlan((organization as { planTier?: string }).planTier),
+    }),
+    // Must be the last plugin: lets Server Actions set auth cookies directly.
+    nextCookies(),
+  ],
+})
