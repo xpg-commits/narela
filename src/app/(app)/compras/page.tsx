@@ -43,36 +43,37 @@ export default async function ComprasPage() {
         <h2 className="text-sm font-medium text-muted-foreground">
           ☑ Lista de la compra
         </h2>
-        {active.length === 0 ? (
+        {active.length === 0 && dormant.length === 0 ? (
           <p className="rounded-md border border-dashed px-3 py-4 text-sm text-muted-foreground">
             Nada pendiente de comprar.
           </p>
         ) : (
           <div className="space-y-1.5">
             {active.map((item) => (
-              <ShoppingItemRow key={item.id} id={item.id} name={item.name} />
+              <ShoppingItemRow
+                key={item.id}
+                id={item.id}
+                name={item.name}
+                novaGroup={item.novaGroup}
+                addedBy={item.addedBy}
+              />
+            ))}
+            {/* Checked items sink to the bottom of the same list, greyed out
+                with who checked them off, instead of vanishing into a
+                separate section — they stay one un-check away. */}
+            {dormant.map((item) => (
+              <ShoppingItemRow
+                key={item.id}
+                id={item.id}
+                name={item.name}
+                novaGroup={item.novaGroup}
+                checked
+                checkedBy={item.checkedBy}
+              />
             ))}
           </div>
         )}
       </section>
-
-      {dormant.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="text-sm font-medium text-muted-foreground">
-            Comprados recientemente
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {dormant.map((item) => (
-              <span
-                key={item.id}
-                className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground"
-              >
-                {item.name}
-              </span>
-            ))}
-          </div>
-        </section>
-      )}
     </div>
   )
 }

@@ -4,9 +4,9 @@ import Link from "next/link"
 import { ChevronDownIcon } from "lucide-react"
 
 import { auth } from "@/lib/auth"
-import { SignOutButton } from "@/components/auth/sign-out-button"
 import { CreateHouseholdForm } from "@/components/household/create-household-form"
 import { AutoActivateHousehold } from "@/components/household/auto-activate-household"
+import { UserMenu } from "@/components/household/user-menu"
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import {
@@ -23,16 +23,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { AddTaskDialog } from "@/components/tasks/add-task-dialog"
-
-const MODULE_LINKS = [
-  { href: "/hogar", label: "🏠 Hogar" },
-  { href: "/mascotas", label: "🐶 Mascotas" },
-  { href: "/vehiculos", label: "🚗 Vehículos" },
-  { href: "/ninos", label: "👶 Niños" },
-  { href: "/salud", label: "💊 Salud" },
-  { href: "/compras", label: "🛒 Compras" },
-  { href: "/plantillas", label: "📋 Plantillas de rutinas" },
-]
+import {
+  ALL_FILTER_KEY,
+  DEFAULT_MODULE_ORDER,
+  filterHref,
+  filterIcon,
+  filterLabel,
+  isFilterKey,
+  type FilterKey,
+} from "@/lib/modules"
+import { Logo } from "@/components/brand/logo"
+import { PageTransition } from "@/components/layout/page-transition"
 
 export default async function AppLayout({
   children,
@@ -56,7 +57,7 @@ export default async function AppLayout({
     }
 
     return (
-      <div className="flex flex-1 items-center justify-center bg-muted/30 px-4 py-12">
+      <div className="flex flex-1 items-center justify-center px-4 py-12">
         <Card className="w-full max-w-sm">
           <CardHeader>
             <CardTitle>Crea tu hogar</CardTitle>
@@ -74,11 +75,44 @@ export default async function AppLayout({
 
   const household = await auth.api.getFullOrganization({ headers: reqHeaders })
 
+  const rawEnabled = (household as { enabledModules?: unknown })?.enabledModules
+  const enabledSet = new Set<FilterKey>(
+    Array.isArray(rawEnabled) ? rawEnabled.filter(isFilterKey) : DEFAULT_MODULE_ORDER
+  )
+  const rawOrder = (household as { moduleOrder?: unknown })?.moduleOrder
+  const order: FilterKey[] = Array.isArray(rawOrder)
+    ? rawOrder.filter(isFilterKey)
+    : DEFAULT_MODULE_ORDER
+
+  const moduleLinks = [
+    ...order
+      .filter((key) => enabledSet.has(key))
+      .map((key) => ({
+        key,
+        href: key === ALL_FILTER_KEY ? "/dashboard" : (filterHref(key) ?? "/dashboard"),
+        label: filterLabel(key),
+        icon: filterIcon(key),
+      })),
+    { key: "TEMPLATES", href: "/plantillas", label: "Plantillas de rutinas", icon: "📋" },
+  ]
+
+  const myMember = household?.members.find((m) => m.userId === session.user.id)
+  const myColor = (myMember as { color?: string } | undefined)?.color ?? "terracota"
+  const memberOptions = (household?.members ?? []).map((m) => ({
+    id: m.id,
+    name: (m as { displayName?: string | null }).displayName ?? m.user.name,
+  }))
+
   return (
-    <div className="flex min-h-full flex-1 flex-col bg-muted/40">
+    <div className="flex min-h-full flex-1 flex-col">
       <header className="flex items-center justify-between bg-card/80 px-6 py-3 shadow-[0_1px_0_rgba(80,50,20,0.05)] backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <Link href="/dashboard" className="font-heading font-semibold tracking-tight">
+          <UserMenu name={session.user.name} color={myColor} image={session.user.image} />
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-1.5 font-heading font-semibold tracking-tight"
+          >
+            <Logo size={22} />
             Narela
           </Link>
           <span className="hidden text-sm text-muted-foreground sm:inline">
@@ -94,24 +128,19 @@ export default async function AppLayout({
               <ChevronDownIcon className="size-3.5" />
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              {MODULE_LINKS.map((item) => (
-                <DropdownMenuItem key={item.href} render={<Link href={item.href} />}>
-                  {item.label}
+              {moduleLinks.map((item) => (
+                <DropdownMenuItem key={item.key} render={<Link href={item.href} />}>
+                  {item.key === ALL_FILTER_KEY ? <Logo size={14} /> : item.icon} {item.label}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Link
-            href="/ajustes/miembros"
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-          >
-            Miembros
-          </Link>
-          <SignOutButton />
-          <AddTaskDialog />
+          <AddTaskDialog members={memberOptions} currentMemberId={myMember?.id ?? ""} />
         </nav>
       </header>
-      <main className="flex flex-1 flex-col">{children}</main>
+      <main className="flex flex-1 flex-col">
+        <PageTransition>{children}</PageTransition>
+      </main>
     </div>
   )
 }

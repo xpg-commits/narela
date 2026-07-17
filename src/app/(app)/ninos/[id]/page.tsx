@@ -5,6 +5,8 @@ import { getChild } from "@/services/children"
 import { getTasksForEntity } from "@/services/tasks"
 import { QuickAddTaskForm } from "@/components/tasks/quick-add-task-form"
 import { TaskSection } from "@/components/tasks/task-section"
+import { EntityPhotoUpload } from "@/components/shared/entity-photo-upload"
+import { updateChildPhotoAction } from "@/actions/children"
 
 export default async function ChildDetailPage({
   params,
@@ -23,7 +25,12 @@ export default async function ChildDetailPage({
 
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 space-y-8 px-6 py-10">
-      <div>
+      <div className="flex items-center gap-4">
+        <EntityPhotoUpload
+          currentUrl={child.photoUrl}
+          fallbackText={child.name.charAt(0).toUpperCase()}
+          uploadAction={updateChildPhotoAction.bind(null, child.id)}
+        />
         <h1 className="text-2xl font-semibold tracking-tight">{child.name}</h1>
       </div>
 

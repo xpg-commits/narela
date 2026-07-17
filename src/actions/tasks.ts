@@ -14,7 +14,7 @@ const RECURRING_TYPES = new Set<string>([
 ])
 
 export async function createTaskAction(formData: FormData): Promise<ActionResult> {
-  const { householdId } = await requireActiveMember()
+  const { householdId, member } = await requireActiveMember()
 
   const title = String(formData.get("title") ?? "").trim()
   if (!title) {
@@ -80,6 +80,20 @@ export async function createTaskAction(formData: FormData): Promise<ActionResult
     }
   }
 
+  // Defaults to whoever's creating it, unless a specific person was chosen
+  // in the "¿para quién?" selector (or the AI assistant set one explicitly).
+  const assignedToMemberIdRaw = String(formData.get("assignedToMemberId") ?? "").trim()
+  let assignedToMemberId = assignedToMemberIdRaw || member.id
+  if (assignedToMemberId !== member.id) {
+    const assignedMember = await db.householdMember.findUnique({
+      where: { id: assignedToMemberId },
+      select: { organizationId: true },
+    })
+    if (!assignedMember || assignedMember.organizationId !== householdId) {
+      return { success: false, error: "No se encontró ese miembro." }
+    }
+  }
+
   const recurrenceTypeRaw = String(formData.get("recurrenceType") ?? "").trim()
   const recurrenceIntervalDaysRaw = String(
     formData.get("recurrenceIntervalDays") ?? ""
@@ -100,6 +114,7 @@ export async function createTaskAction(formData: FormData): Promise<ActionResult
     vehicleId,
     childId,
     relatedMemberId,
+    assignedToMemberId,
     recurrenceType,
     recurrenceIntervalDays,
   })

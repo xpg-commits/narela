@@ -21,3 +21,16 @@ export async function listChildren(householdId: string) {
 export async function getChild(childId: string) {
   return db.child.findUnique({ where: { id: childId } })
 }
+
+export type UpdateChildInput = {
+  name: string
+  birthDate?: Date | null
+}
+
+export async function updateChild(childId: string, input: UpdateChildInput) {
+  return db.child.update({ where: { id: childId }, data: input })
+}
+
+export async function deleteChild(childId: string) {
+  return db.child.delete({ where: { id: childId } })
+}

@@ -56,6 +56,7 @@ export function TemplateApplyForm({
     vehicleId: null,
     childId: null,
     relatedMemberId: null,
+    assignedToMemberId: null,
   }))
 
   if (!triggerDate) {

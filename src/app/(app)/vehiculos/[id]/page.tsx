@@ -5,6 +5,8 @@ import { getVehicle } from "@/services/vehicles"
 import { getTasksForEntity } from "@/services/tasks"
 import { QuickAddTaskForm } from "@/components/tasks/quick-add-task-form"
 import { TaskSection } from "@/components/tasks/task-section"
+import { EntityPhotoUpload } from "@/components/shared/entity-photo-upload"
+import { updateVehiclePhotoAction } from "@/actions/vehicles"
 
 export default async function VehicleDetailPage({
   params,
@@ -23,12 +25,19 @@ export default async function VehicleDetailPage({
 
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 space-y-8 px-6 py-10">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{vehicle.alias}</h1>
-        <p className="text-muted-foreground">
-          {[vehicle.make, vehicle.model].filter(Boolean).join(" ") || "Sin datos"}
-          {vehicle.plate ? ` · ${vehicle.plate}` : ""}
-        </p>
+      <div className="flex items-center gap-4">
+        <EntityPhotoUpload
+          currentUrl={vehicle.photoUrl}
+          fallbackText={vehicle.alias.charAt(0).toUpperCase()}
+          uploadAction={updateVehiclePhotoAction.bind(null, vehicle.id)}
+        />
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{vehicle.alias}</h1>
+          <p className="text-muted-foreground">
+            {[vehicle.make, vehicle.model].filter(Boolean).join(" ") || "Sin datos"}
+            {vehicle.plate ? ` · ${vehicle.plate}` : ""}
+          </p>
+        </div>
       </div>
 
       <QuickAddTaskForm hiddenFields={{ module: "VEHICLE", vehicleId: vehicle.id }} />

@@ -95,7 +95,10 @@ export async function generatePlanFromText(
       "repetición, deja ambos campos en null. Cada tarea también lleva petId, vehicleId, " +
       "childId y relatedMemberId — normalmente los cuatro en null, salvo que la frase se " +
       "refiera claramente a un elemento ya registrado de la lista de contexto que te doy más " +
-      "abajo, en cuyo caso rellena solo el campo correspondiente con su id exacto." +
+      "abajo, en cuyo caso rellena solo el campo correspondiente con su id exacto. Además " +
+      "lleva assignedToMemberId: solo rellénalo con el id de un miembro de la lista si la " +
+      "frase dice explícitamente quién debe encargarse de la tarea (p. ej. \"que la haga " +
+      "Juan\", \"asígnaselo a Marta\"); si no se especifica responsable, déjalo en null." +
       formatEntityContext(entityContext),
     messages: [{ role: "user", content: inputText }],
     output_config: { format: zodOutputFormat(TaskPlanSchema) },

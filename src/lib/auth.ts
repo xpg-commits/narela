@@ -5,6 +5,9 @@ import { nextCookies } from "better-auth/next-js"
 
 import { db } from "@/lib/db"
 import { memberLimitForPlan } from "@/lib/plan"
+import { DEFAULT_MEMBER_COLOR } from "@/lib/memberColors"
+import { DEFAULT_MODULE_ORDER } from "@/lib/modules"
+import { sendEmail } from "@/lib/email"
 
 const googleConfigured = Boolean(
   process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
@@ -29,6 +32,18 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
+    sendResetPassword: async ({ user, url }) => {
+      await sendEmail({
+        to: user.email,
+        subject: "Recupera tu contraseña de Narela",
+        html: `
+          <p>Hola ${user.name},</p>
+          <p>Pulsa el siguiente enlace para elegir una contraseña nueva. Caduca en 1 hora.</p>
+          <p><a href="${url}">Restablecer contraseña</a></p>
+          <p>Si no lo has pedido tú, puedes ignorar este email.</p>
+        `,
+      })
+    },
   },
   socialProviders: googleConfigured
     ? {
@@ -54,6 +69,31 @@ export const auth = betterAuth({
               defaultValue: "FREE",
               input: false,
             },
+            // Which domain modules (Mascotas, Vehículos...) this household
+            // actually uses — hidden from nav when off, so a household
+            // without pets/kids/a car isn't stuck looking at empty sections.
+            // Includes the synthetic "ALL" key ("Todo") — it's a togglable
+            // entry in the same list, not a hardcoded fixture.
+            enabledModules: {
+              type: "string[]",
+              required: true,
+              defaultValue: DEFAULT_MODULE_ORDER,
+            },
+            // Full display order for the module filter chips, including
+            // "ALL" — independent from enabledModules so toggling something
+            // off doesn't lose its position when re-enabled later.
+            moduleOrder: {
+              type: "string[]",
+              required: true,
+              defaultValue: DEFAULT_MODULE_ORDER,
+            },
+            // The one module pinned right after "Todo" in the chip bar,
+            // regardless of custom order — chosen from Configuración del
+            // hogar.
+            primaryModuleKey: {
+              type: "string",
+              required: false,
+            },
           },
         },
         member: {
@@ -71,6 +111,13 @@ export const auth = betterAuth({
             displayName: {
               type: "string",
               required: false,
+            },
+            // Which of the five brand accent colors this member's tasks show
+            // up in (task-item.tsx), chosen from their own profile page.
+            color: {
+              type: "string",
+              required: true,
+              defaultValue: DEFAULT_MEMBER_COLOR,
             },
           },
         },

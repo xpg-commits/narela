@@ -47,10 +47,7 @@ export default async function MiembrosPage() {
           const visibilityRole = (member as { visibilityRole?: string })
             .visibilityRole
           return (
-            <div
-              key={member.id}
-              className="flex items-center justify-between rounded-md border px-4 py-3"
-            >
+            <div key={member.id} className="list-row justify-between">
               <div>
                 <p className="font-medium">{member.user.name}</p>
                 <p className="text-sm text-muted-foreground">

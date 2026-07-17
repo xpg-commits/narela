@@ -1,14 +1,16 @@
 "use client"
 
-import { useTransition } from "react"
+import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
+import { motion } from "motion/react"
 
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { setTaskStatusAction } from "@/actions/tasks"
+import { memberColorVar } from "@/lib/memberColors"
 
 type TaskItemProps = {
   id: string
@@ -19,6 +21,8 @@ type TaskItemProps = {
   completedAt?: Date | null
   subtitle?: string | null
   recurring?: boolean
+  assignedToColor?: string | null
+  index?: number
 }
 
 export function TaskItem({
@@ -30,9 +34,12 @@ export function TaskItem({
   completedAt,
   subtitle,
   recurring = false,
+  assignedToColor = null,
+  index = 0,
 }: TaskItemProps) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
+  const [pulseKey, setPulseKey] = useState(0)
 
   const dateLabel = completedAt
     ? `Hecha el ${format(completedAt, "d MMM", { locale: es })}`
@@ -41,22 +48,41 @@ export function TaskItem({
       : null
 
   return (
-    <label className="list-row has-[[data-disabled]]:opacity-60">
-      <Checkbox
-        defaultChecked={defaultDone}
-        disabled={pending}
-        onCheckedChange={(checked) => {
-          startTransition(async () => {
-            const result = await setTaskStatusAction(id, checked === true)
-            if (!result.success) {
-              toast.error(result.error)
-              return
-            }
-            router.refresh()
-          })
-        }}
-      />
+    <label
+      className="list-row stagger-in has-[[data-disabled]]:opacity-60"
+      style={{ "--stagger": index } as React.CSSProperties}
+    >
+      <motion.span
+        key={pulseKey}
+        initial={pulseKey > 0 ? { scale: 1.35 } : false}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 500, damping: 15 }}
+        className="inline-flex"
+      >
+        <Checkbox
+          defaultChecked={defaultDone}
+          disabled={pending}
+          onCheckedChange={(checked) => {
+            if (checked === true) setPulseKey((k) => k + 1)
+            startTransition(async () => {
+              const result = await setTaskStatusAction(id, checked === true)
+              if (!result.success) {
+                toast.error(result.error)
+                return
+              }
+              router.refresh()
+            })
+          }}
+        />
+      </motion.span>
       <span className="flex flex-1 items-center gap-2 text-sm">
+        {assignedToColor && (
+          <span
+            className="size-2 shrink-0 rounded-full"
+            style={{ backgroundColor: memberColorVar(assignedToColor) }}
+            aria-hidden
+          />
+        )}
         {title}
         {recurring && <span title="Se repite">🔁</span>}
         {subtitle && <Badge variant="secondary">{subtitle}</Badge>}

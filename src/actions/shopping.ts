@@ -7,7 +7,7 @@ import * as shoppingService from "@/services/shopping"
 type ActionResult = { success: true } | { success: false; error: string }
 
 export async function addShoppingItemAction(formData: FormData): Promise<ActionResult> {
-  const { householdId } = await requireActiveMember()
+  const { householdId, member } = await requireActiveMember()
 
   const name = String(formData.get("name") ?? "").trim()
   if (!name) {
@@ -15,7 +15,7 @@ export async function addShoppingItemAction(formData: FormData): Promise<ActionR
   }
 
   const list = await shoppingService.getOrCreateDefaultList(householdId)
-  await shoppingService.addShoppingItem(list.id, name)
+  await shoppingService.addShoppingItem(list.id, name, member.id)
 
   return { success: true }
 }
@@ -29,13 +29,13 @@ async function assertItemBelongsToHousehold(itemId: string, householdId: string)
 }
 
 export async function markItemPurchasedAction(itemId: string): Promise<ActionResult> {
-  const { householdId } = await requireActiveMember()
+  const { householdId, member } = await requireActiveMember()
 
   if (!(await assertItemBelongsToHousehold(itemId, householdId))) {
     return { success: false, error: "Producto no encontrado." }
   }
 
-  await shoppingService.markItemPurchased(itemId)
+  await shoppingService.markItemPurchased(itemId, member.id)
   return { success: true }
 }
 

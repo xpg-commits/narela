@@ -14,7 +14,7 @@ export async function applyTemplateAction(
   triggerDateISO: string,
   drafts: TaskDraft[]
 ): Promise<ActionResult> {
-  const { householdId, session } = await requireActiveMember()
+  const { householdId, session, member } = await requireActiveMember()
 
   const template = await db.routineTemplate.findUnique({ where: { key: templateKey } })
   if (!template || !template.isActive) {
@@ -44,6 +44,7 @@ export async function applyTemplateAction(
   await applyTaskPlan(householdId, parsed.data, {
     source: "TEMPLATE",
     anchorDate: triggerDate,
+    createdByMemberId: member.id,
   })
 
   return { success: true }

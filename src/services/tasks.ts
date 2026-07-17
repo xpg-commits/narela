@@ -56,7 +56,11 @@ export async function getTasksForEntity(
 ) {
   const tasks = await db.task.findMany({
     where: { ...where, ...visibleTaskWhere(member) },
-    include: { child: true, relatedMember: { include: { user: true } } },
+    include: {
+      child: true,
+      relatedMember: { include: { user: true } },
+      assignedTo: true,
+    },
     orderBy: [{ dueDate: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }],
   })
 
@@ -130,7 +134,8 @@ export type DashboardTasks = {
 
 export async function getDashboardTasks(
   householdId: string,
-  member: VisibilityMember
+  member: VisibilityMember,
+  filters?: { module?: TaskModule; onlyAssignedToMemberId?: string }
 ): Promise<DashboardTasks> {
   const now = new Date()
   const todayEnd = endOfDay(now)
@@ -140,6 +145,10 @@ export async function getDashboardTasks(
     where: {
       householdId,
       status: "PENDING",
+      ...(filters?.module ? { module: filters.module } : {}),
+      ...(filters?.onlyAssignedToMemberId
+        ? { assignedToMemberId: filters.onlyAssignedToMemberId }
+        : {}),
       ...visibleTaskWhere(member),
     },
     include: { pet: true, vehicle: true, child: true, assignedTo: true },
@@ -167,6 +176,10 @@ export async function applyTaskPlan(
     source?: "AI" | "TEMPLATE"
     aiGenerationId?: string
     anchorDate?: Date
+    // Whoever confirmed the plan — the fallback assignee for any draft that
+    // didn't name a specific person, same "assigned to whoever creates it"
+    // default as a manually-added task.
+    createdByMemberId?: string
   }
 ) {
   const anchor = startOfDay(options?.anchorDate ?? new Date())
@@ -189,6 +202,7 @@ export async function applyTaskPlan(
           vehicleId: draft.vehicleId,
           childId: draft.childId,
           relatedMemberId: draft.relatedMemberId,
+          assignedToMemberId: draft.assignedToMemberId ?? options?.createdByMemberId ?? null,
         },
       })
     )

@@ -5,6 +5,7 @@ import { APIError } from "better-auth"
 
 import { auth } from "@/lib/auth"
 import { memberLimitForPlan } from "@/lib/plan"
+import { DEFAULT_MODULE_ORDER } from "@/lib/modules"
 
 type ActionResult<T = undefined> =
   | { success: true; data: T }
@@ -29,7 +30,12 @@ export async function createHousehold(formData: FormData): Promise<ActionResult>
 
   try {
     await auth.api.createOrganization({
-      body: { name, slug: slugify(name) },
+      body: {
+        name,
+        slug: slugify(name),
+        enabledModules: DEFAULT_MODULE_ORDER,
+        moduleOrder: DEFAULT_MODULE_ORDER,
+      },
       headers: await headers(),
     })
   } catch (error) {

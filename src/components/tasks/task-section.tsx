@@ -9,6 +9,7 @@ type TaskForSection = {
   completedAt?: Date | null
   subtitle?: string | null
   recurrenceType?: string
+  assignedTo?: { color: string } | null
 }
 
 export function TaskSection({
@@ -32,17 +33,17 @@ export function TaskSection({
   const todayStart = startOfDay(new Date())
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-3.5">
       <h2 className="font-heading text-base font-semibold text-foreground/80">
         {icon} {title}
       </h2>
       {tasks.length === 0 ? (
-        <p className="rounded-xl bg-muted/60 px-3.5 py-4 text-sm text-muted-foreground">
+        <p className="rounded-2xl bg-muted/60 px-4 py-5 text-sm text-muted-foreground">
           {emptyLabel}
         </p>
       ) : (
-        <div className="space-y-2">
-          {tasks.map((task) => (
+        <div className="space-y-2.5">
+          {tasks.map((task, index) => (
             <TaskItem
               key={task.id}
               id={task.id}
@@ -53,6 +54,8 @@ export function TaskSection({
               completedAt={showAsDone ? task.completedAt : null}
               subtitle={task.subtitle}
               recurring={Boolean(task.recurrenceType && task.recurrenceType !== "NONE")}
+              assignedToColor={task.assignedTo?.color ?? null}
+              index={index}
             />
           ))}
         </div>

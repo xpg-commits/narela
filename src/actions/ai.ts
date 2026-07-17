@@ -112,7 +112,7 @@ export async function confirmTaskPlanAction(
   aiGenerationId: string,
   drafts: TaskDraft[]
 ): Promise<ActionResult> {
-  const { householdId } = await requireActiveMember()
+  const { householdId, member } = await requireActiveMember()
 
   const generation = await db.aiGeneration.findUnique({
     where: { id: aiGenerationId },
@@ -155,11 +155,16 @@ export async function confirmTaskPlanAction(
       draft.relatedMemberId && validMemberIds.has(draft.relatedMemberId)
         ? draft.relatedMemberId
         : null,
+    assignedToMemberId:
+      draft.assignedToMemberId && validMemberIds.has(draft.assignedToMemberId)
+        ? draft.assignedToMemberId
+        : null,
   }))
 
   await applyTaskPlan(householdId, sanitized, {
     source: "AI",
     aiGenerationId,
+    createdByMemberId: member.id,
   })
 
   return { success: true, data: undefined }

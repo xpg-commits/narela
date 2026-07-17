@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { toast } from "sonner"
 import { addDays, format } from "date-fns"
 import { es } from "date-fns/locale"
@@ -67,6 +67,7 @@ type Plan = {
 
 export function AssistantForm({ onSuccess }: { onSuccess?: () => void } = {}) {
   const router = useRouter()
+  const pathname = usePathname()
   const [pending, startTransition] = useTransition()
   const [plan, setPlan] = useState<Plan | null>(null)
   const [excluded, setExcluded] = useState<Set<number>>(new Set())
@@ -180,7 +181,10 @@ export function AssistantForm({ onSuccess }: { onSuccess?: () => void } = {}) {
                     `${selected.length} ${selected.length === 1 ? "tarea creada" : "tareas creadas"}.`
                   )
                   onSuccess?.()
-                  router.push("/dashboard")
+                  // Pushing to the page we're already on (e.g. confirming
+                  // from the dashboard's own floating "+") stalls the
+                  // router — only navigate when we're actually elsewhere.
+                  if (pathname !== "/dashboard") router.push("/dashboard")
                   router.refresh()
                 })
               }}

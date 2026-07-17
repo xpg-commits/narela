@@ -41,7 +41,14 @@ export function RecurrenceFields() {
         className="w-20"
       />
       <span className="text-muted-foreground">días,</span>
-      <Select name="recurrenceType" defaultValue="REACTIVE">
+      <Select
+        name="recurrenceType"
+        defaultValue="REACTIVE"
+        items={{
+          REACTIVE: "desde que la completo",
+          FIXED_SCHEDULE: "desde la fecha prevista",
+        }}
+      >
         <SelectTrigger className="w-auto">
           <SelectValue />
         </SelectTrigger>

@@ -23,7 +23,6 @@ export function CreateHouseholdForm() {
             toast.error(result.error)
             return
           }
-          router.push("/dashboard")
           router.refresh()
         })
       }}

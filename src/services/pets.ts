@@ -23,3 +23,18 @@ export async function listPets(householdId: string) {
 export async function getPet(petId: string) {
   return db.pet.findUnique({ where: { id: petId } })
 }
+
+export type UpdatePetInput = {
+  name: string
+  species: string
+  breed?: string | null
+  birthDate?: Date | null
+}
+
+export async function updatePet(petId: string, input: UpdatePetInput) {
+  return db.pet.update({ where: { id: petId }, data: input })
+}
+
+export async function deletePet(petId: string) {
+  return db.pet.delete({ where: { id: petId } })
+}

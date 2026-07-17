@@ -28,6 +28,11 @@ export const TaskDraftSchema = z.object({
   vehicleId: z.string().nullable(),
   childId: z.string().nullable(),
   relatedMemberId: z.string().nullable(),
+  // Who's responsible for doing the task — different from relatedMemberId,
+  // which is who the task is *about* (e.g. a health task's subject). Only
+  // set when the text names a specific person to do it; left null to fall
+  // back to whoever confirms the plan.
+  assignedToMemberId: z.string().nullable(),
 })
 
 export const TaskPlanSchema = z.object({

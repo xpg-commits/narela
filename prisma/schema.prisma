@@ -95,6 +95,11 @@ model Household {
   aiGenerations       AiGeneration[]
   shoppingLists       ShoppingList[]
 
+  enabledModules String[] @default(["HOME", "PET", "VEHICLE", "CHILD", "HEALTH", "SHOPPING"])
+
+  moduleOrder      String[] @default(["ALL","HOME","PET","VEHICLE","CHILD","HEALTH","SHOPPING"])
+  primaryModuleKey String?
+
   @@unique([slug])
   @@map("household")
 }
@@ -110,8 +115,12 @@ model HouseholdMember {
   visibilityRole String    @default("ADULT")
   displayName    String?
 
-  assignedTasks      Task[] @relation("TaskAssignee")
-  relatedHealthTasks Task[] @relation("TaskRelatedMember")
+  assignedTasks        Task[]         @relation("TaskAssignee")
+  relatedHealthTasks   Task[]         @relation("TaskRelatedMember")
+  shoppingItemsAdded   ShoppingItem[] @relation("ShoppingItemAddedBy")
+  shoppingItemsChecked ShoppingItem[] @relation("ShoppingItemCheckedBy")
+
+  color String @default("terracota")
 
   @@index([organizationId])
   @@index([userId])
@@ -211,6 +220,7 @@ model Pet {
   breed       String?
   birthDate   DateTime?
   notes       String?
+  photoUrl    String?
 
   household  Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
   tasks      Task[]
@@ -241,6 +251,7 @@ model Vehicle {
   year        Int?
   plate       String?
   notes       String?
+  photoUrl    String?
 
   household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   tasks     Task[]
@@ -256,6 +267,7 @@ model Child {
   name        String
   birthDate   DateTime?
   notes       String?
+  photoUrl    String?
 
   household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   tasks     Task[]
@@ -403,8 +415,18 @@ model ShoppingItem {
   lastPurchasedAt         DateTime?
   avgPurchaseIntervalDays Int?
 
+  // Best-effort NOVA processing-level lookup (1-4) against Open Food Facts
+  // at the moment the item is added — null when nothing matched, never
+  // blocks adding the item if the lookup fails.
+  novaGroup Int?
+
+  addedByMemberId   String?
+  checkedByMemberId String?
+
   list      ShoppingList           @relation(fields: [listId], references: [id], onDelete: Cascade)
   purchases ShoppingItemPurchase[]
+  addedBy   HouseholdMember?       @relation("ShoppingItemAddedBy", fields: [addedByMemberId], references: [id], onDelete: SetNull)
+  checkedBy HouseholdMember?       @relation("ShoppingItemCheckedBy", fields: [checkedByMemberId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
 
