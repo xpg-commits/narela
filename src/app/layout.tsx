@@ -3,6 +3,7 @@ import { Geist_Mono, Syne } from "next/font/google";
 import "./globals.css";
 
 import { Toaster } from "@/components/ui/sonner";
+import { InstallBanner } from "@/components/pwa/install-banner";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -56,6 +57,7 @@ export default function RootLayout({
         {/* wwwelly's brand look (fondo crema, cálido) is the only theme —
             :root already is that palette, .dark is never applied, so there's
             no runtime switch to mediate and no next-themes provider needed. */}
+        <InstallBanner />
         {children}
         <Toaster />
       </body>
