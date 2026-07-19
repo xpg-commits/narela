@@ -24,7 +24,7 @@ export function GettingStartedBanner({
   const isSolo = adultCount <= 1
 
   return (
-    <Card className="border-none bg-accent/50">
+    <Card className="border-none bg-secondary/60">
       <CardContent className="space-y-3 py-5">
         <div>
           <h2 className="font-heading text-lg font-semibold tracking-tight">

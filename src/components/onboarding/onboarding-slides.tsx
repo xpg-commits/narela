@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import Link from "next/link"
 import { BrainIcon, LayoutGridIcon, SparklesIcon, UsersIcon } from "lucide-react"
 
@@ -31,14 +31,37 @@ const SLIDES = [
   },
 ] as const
 
+const SWIPE_THRESHOLD = 50
+
 export function OnboardingSlides() {
   const [index, setIndex] = useState(0)
   const isLast = index === SLIDES.length - 1
   const slide = SLIDES[index]
   const Icon = slide.icon
+  const touchStartX = useRef<number | null>(null)
+
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    const startX = touchStartX.current
+    touchStartX.current = null
+    if (startX === null) return
+    const deltaX = e.changedTouches[0].clientX - startX
+    if (deltaX < -SWIPE_THRESHOLD && index < SLIDES.length - 1) {
+      setIndex((i) => i + 1)
+    } else if (deltaX > SWIPE_THRESHOLD && index > 0) {
+      setIndex((i) => i - 1)
+    }
+  }
 
   return (
-    <div className="flex w-full max-w-sm flex-col items-center gap-8 text-center">
+    <div
+      className="flex w-full max-w-sm flex-col items-center gap-8 text-center"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className="flex items-center gap-2 font-heading text-xl font-semibold tracking-tight">
         <Logo size={32} />
         wwwelly
